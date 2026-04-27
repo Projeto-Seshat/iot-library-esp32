@@ -8,6 +8,8 @@ const char* password = "senha";
 // ================= MQTT =================
 const char* mqtt_server = "broker.hivemq.com";
 const char* topico_status = "senac/biblioteca/sala1/status";
+const char* topico_reserva = "senac/biblioteca/sala1/reserva";
+const char* topico_liberar = "senac/biblioteca/sala1/liberar";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -16,12 +18,14 @@ PubSubClient client(espClient);
 #define BOTAO 4
 #define LED_VERDE 2
 #define LED_VERMELHO 5
+#define LED_AMARELO 21
 
-// ================= VARIÁVEIS DE ESTADO =================
-bool salaOcupada = false;
+// ================= ESTADOS =================
+enum EstadoSala { LIVRE, RESERVADA, OCUPADA };
+EstadoSala estadoAtual = LIVRE;
 bool ultimoEstadoBotao = HIGH;
 unsigned long tempoUltimoDebounce = 0;
-unsigned long tempoDebounce = 50; // 50ms para evitar duplo clique
+unsigned long tempoDebounce = 50;
 
 // ================= WIFI SETUP =================
 void setup_wifi() {
@@ -42,16 +46,38 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+// ================= MQTT CALLBACK =================
+void callback(char* topic, byte* payload, unsigned int length) {
+  String mensagem = "";
+  for (int i = 0; i < length; i++) {
+    mensagem += (char)payload[i];
+  }
+
+  if (String(topic) == topico_reserva) {
+    if (mensagem == "reservada") {
+      estadoAtual = RESERVADA;
+      atualizarSala();
+      Serial.println("Reserva recebida - Sala reservada");
+    }
+  } else if (String(topic) == topico_liberar) {
+    if (mensagem == "liberar") {
+      estadoAtual = LIVRE;
+      atualizarSala();
+      Serial.println("Tempo esgotado - Sala liberada");
+    }
+  }
+}
+
 // ================= MQTT RECONNECT =================
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
 
-    // ID do cliente deve ser único
-    if (client.connect("ESP32_SmartBib_Sala1")) { 
+    if (client.connect("ESP32_SmartBib_Sala1")) {
       Serial.println("conectado!");
-      // Publica o estado inicial ao conectar
-      atualizarSala(); 
+      client.subscribe(topico_reserva);
+      client.subscribe(topico_liberar);
+      atualizarSala();
     } else {
       Serial.print("falha, rc=");
       Serial.print(client.state());
@@ -63,16 +89,28 @@ void reconnect() {
 
 // ================= LÓGICA DA SALA =================
 void atualizarSala() {
-  if (salaOcupada) {
-    digitalWrite(LED_VERDE, LOW);
-    digitalWrite(LED_VERMELHO, HIGH);
-    client.publish(topico_status, "ocupada");
-    Serial.println("Status: Sala Ocupada");
-  } else {
-    digitalWrite(LED_VERMELHO, LOW);
-    digitalWrite(LED_VERDE, HIGH);
-    client.publish(topico_status, "livre");
-    Serial.println("Status: Sala Livre");
+  switch (estadoAtual) {
+    case LIVRE:
+      digitalWrite(LED_VERDE, HIGH);
+      digitalWrite(LED_AMARELO, LOW);
+      digitalWrite(LED_VERMELHO, LOW);
+      client.publish(topico_status, "livre");
+      Serial.println("Status: Sala Livre");
+      break;
+    case RESERVADA:
+      digitalWrite(LED_VERDE, LOW);
+      digitalWrite(LED_AMARELO, HIGH);
+      digitalWrite(LED_VERMELHO, LOW);
+      client.publish(topico_status, "reservada");
+      Serial.println("Status: Sala Reservada");
+      break;
+    case OCUPADA:
+      digitalWrite(LED_VERDE, LOW);
+      digitalWrite(LED_AMARELO, LOW);
+      digitalWrite(LED_VERMELHO, HIGH);
+      client.publish(topico_status, "ocupada");
+      Serial.println("Status: Sala Ocupada");
+      break;
   }
 }
 
@@ -83,13 +121,15 @@ void setup() {
   pinMode(BOTAO, INPUT_PULLUP);
   pinMode(LED_VERDE, OUTPUT);
   pinMode(LED_VERMELHO, OUTPUT);
+  pinMode(LED_AMARELO, OUTPUT);
 
-  // Estado inicial padrão
   digitalWrite(LED_VERDE, HIGH);
   digitalWrite(LED_VERMELHO, LOW);
+  digitalWrite(LED_AMARELO, LOW);
 
   setup_wifi();
   client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 }
 
 // ================= LOOP =================
@@ -99,7 +139,6 @@ void loop() {
   }
   client.loop();
 
-  // Leitura do botão com Debounce
   int leituraAtual = digitalRead(BOTAO);
 
   if (leituraAtual != ultimoEstadoBotao) {
@@ -107,12 +146,15 @@ void loop() {
   }
 
   if ((millis() - tempoUltimoDebounce) > tempoDebounce) {
-    // Se o estado mudou para pressionado (LOW)
     if (leituraAtual == LOW && ultimoEstadoBotao == HIGH) {
-      salaOcupada = !salaOcupada; // Inverte o estado da sala
-      atualizarSala();            // Atualiza LEDs e publica no MQTT
+      if (estadoAtual == LIVRE || estadoAtual == RESERVADA) {
+        estadoAtual = OCUPADA;
+      } else {
+        estadoAtual = LIVRE;
+      }
+      atualizarSala();
     }
   }
-  
+
   ultimoEstadoBotao = leituraAtual;
 }
