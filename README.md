@@ -42,7 +42,7 @@
 ## 📁 Estrutura do Repositório
 * `/SmartBib_Sala`: Código-fonte (.ino) para o ESP32.
 * `/Docs`: Documentação analítica e diagramas de arquitetura.
-* `/Web`: Frontend do painel de monitoramento.
+
 
 ---
 [cite_start]*Faculdade Senac Pernambuco - Análise e Desenvolvimento de Sistemas (ADS)* [cite: 51, 102]
