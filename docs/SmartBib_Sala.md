@@ -4,7 +4,7 @@ Este código foi desenvolvido para um ESP32 e implementa um sistema de gerenciam
 
 ## Visão Geral
 
-O sistema monitora o estado de occupancy de uma sala (livre/ocupada) através de um botão e exibe o status via LEDs, além de publishes这个消息 ao servidor MQTT.
+O sistema monitora o estado de ocupação de uma sala (livre/ocupada) através de um botão e exibe o status via LEDs, além de publicar esta mensagem ao servidor MQTT.
 
 ## Configurações de Rede
 
