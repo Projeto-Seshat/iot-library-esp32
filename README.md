@@ -1,48 +1,67 @@
-# SmartBib - Sistema de Gestão de Salas de Estudo (IoT + Web)
+# SmartBib - IoT (ESP32)
 
-[cite_start]Este projeto faz parte da Entrega U1 da Unidade Curricular da matéria de IOT, Ideação e Arquitetura do MVP[cite: 1, 2]. [cite_start]O objetivo é modernizar o acesso às salas de reunião da biblioteca da Faculdade Senac Pernambuco utilizando Internet das Coisas (IoT) e protocolos de comunicação em tempo real[cite: 51, 65, 66].
+Sistema embarcado com ESP32 para controle físico das salas de estudo da biblioteca SENAC. O dispositivo gerencia LEDs indicativos de status e se comunica via MQTT com o backend para sincronização em tempo real.
 
-## 👥 Equipe
-* [cite_start]Ágata Maria Ferraz de Oliveira [cite: 55]
-* [cite_start]Guilherme Pereira da Silva [cite: 56]
-* [cite_start]Heloyse Silva Santos [cite: 57]
-* [cite_start]Pedro Henrique Cordeiro Ferreira [cite: 58]
-* [cite_start]Rafaela Dayana da Silva [cite: 59]
+## Hardware
 
-## 🎯 1. Escopo e Temática
-[cite_start]O projeto foca no nicho de **Gestão de Fluxo** e **Experiência do Usuário**[cite: 8, 11]. [cite_start]O SmartBib transforma as cabines de estudo em espaços inteligentes, eliminando a incerteza sobre a ocupação das salas e facilitando a rotatividade justa entre os estudantes[cite: 67, 72].
+| Componente | Pino | Funcao |
+|---|---|---|
+| ESP32 DevKit | -- | Microcontrolador com WiFi |
+| LED Verde | GPIO 2 | Sala LIVRE |
+| LED Amarelo | GPIO 21 | Sala RESERVADA (aguardando confirmacao) |
+| LED Vermelho | GPIO 5 | Sala OCUPADA |
+| Botao (Push Button) | GPIO 4 (`INPUT_PULLUP`) | Alterna estado de ocupacao |
+| Resistores 330ohm | -- | Protecao dos LEDs |
 
-## 🔍 2. Fase de Imersão e Definição
-### [cite_start]Problema e "Dores" [cite: 15]
-* [cite_start]**Falta de Transparência:** Alunos perdem tempo indo até a biblioteca para encontrar salas trancadas ou com "reservas fantasmas"[cite: 105, 106].
-* [cite_start]**Gestão Manual:** Atualmente, a conferência de ocupação depende de intervenção humana, gerando gargalos[cite: 77, 221].
+## Estados da Sala
 
-### [cite_start]Proposta de Valor [cite: 18]
-[cite_start]Oferecer visibilidade em tempo real do status de ocupação (Verde/Livre e Vermelho/Ocupada) tanto no local físico quanto em um painel web centralizado, otimizando o uso do Smart Campus[cite: 68, 80, 134].
+| Estado | LED aceso | Significado |
+|---|---|---|
+| `LIVRE` | Verde | Sala disponivel para uso |
+| `RESERVADA` | Amarelo | Reserva iniciada, aguardando presenca (timer de 5 min no backend) |
+| `OCUPADA` | Vermelho | Usuario presente na sala |
 
-## 🏗️ 3. Arquitetura e Requisitos Técnicos
-### [cite_start]Componentes da Solução [cite: 21]
-* [cite_start]**Borda (IoT):** ESP32 integrado a um botão físico para alternância de estado e LEDs de sinalização visual[cite: 23, 36].
-* [cite_start]**Comunicação (Redes):** Utilização do protocolo **MQTT** para eventos em tempo real, garantindo baixa latência na atualização do status[cite: 25].
-* [cite_start]**Backend e Banco de Dados:** Processamento dos dados recebidos do broker para persistência e alimentação do dashboard[cite: 26, 27].
-* [cite_start]**Painel Web:** Interface de monitoramento para visualização rápida da taxa de ocupação das salas[cite: 94, 96].
+## Transicoes de Estado
 
-### [cite_start]Requisitos de Sistema [cite: 28]
-* [cite_start]**Funcionais:** Registro de ocupação via botão, alteração de cores dos LEDs e exibição em tempo real no painel[cite: 30].
-* [cite_start]**Não Funcionais:** Baixa latência na comunicação via MQTT e escalabilidade para múltiplas salas[cite: 31].
+- **LIVRE** -- botao pressionado --> **OCUPADA** (aluno ocupou sem reserva)
+- **LIVRE** -- comando MQTT `"reservada"` --> **RESERVADA** (backend notificou reserva)
+- **RESERVADA** -- botao pressionado --> **OCUPADA** (aluno confirmou presenca)
+- **RESERVADA** -- comando MQTT `"liberar"` --> **LIVRE** (timeout de confirmacao ou fim da aula)
+- **OCUPADA** -- botao pressionado --> **LIVRE** (aluno liberou a sala)
 
+O botao possui debounce de 50ms via software.
 
-## 🛠️ 4. Protótipo Funcional (Prova de Conceito)
-[cite_start]O protótipo inicial demonstra a integração completa entre o hardware e o sistema de monitoramento[cite: 34, 41]:
-1. **Ação:** O usuário pressiona o botão físico na sala.
-2. **Hardware:** O ESP32 inverte o estado da sala e acende o LED correspondente (Verde -> Livre / Vermelho -> Ocupada).
-3. **Rede:** Uma mensagem JSON é publicada via MQTT para o broker.
-4. **Dashboard:** O painel web atualiza instantaneamente o ícone da sala correspondente.
+## Topicos MQTT
 
-## 📁 Estrutura do Repositório
-* `/SmartBib_Sala`: Código-fonte (.ino) para o ESP32.
-* `/Docs`: Documentação analítica e diagramas de arquitetura.
+| Topico | Direcao | Payload | Finalidade |
+|---|---|---|---|
+| `senac/biblioteca/sala1/status` | Publica (ESP -> broker) | `"livre"`, `"reservada"`, `"ocupada"` | Reporta estado atual da sala |
+| `senac/biblioteca/sala1/reserva` | Subscreve (broker -> ESP) | `"reservada"` | Comando para reservar a sala |
+| `senac/biblioteca/sala1/liberar` | Subscreve (broker -> ESP) | `"liberar"` | Comando para liberar a sala |
 
+Broker: `broker.hivemq.com:1883` (publico, sem autenticacao)
+Client ID: `ESP32_SmartBib_Sala1`
+
+## Estrutura do Repositorio
+
+- `SmartBib_Sala.ino` -- Codigo-fonte Arduino para o ESP32
+- `docs/` -- Documentacao tecnica e diagramas de arquitetura
+
+## Configuracao
+
+1. Edite as credenciais WiFi no codigo:
+   ```cpp
+   const char* ssid = "Nome_Wifi";
+   const char* password = "senha";
+   ```
+2. Altere os topicos MQTT conforme o ID da sala (ex: `sala2`, `sala3`...)
+3. Compile e grave no ESP32 via Arduino IDE
+
+## Dependencias
+
+- [WiFi.h](https://www.arduino.cc/reference/en/libraries/wifi/) (built-in ESP32)
+- [PubSubClient.h](https://www.arduino.cc/reference/en/libraries/pubsubclient/) (MQTT)
 
 ---
-[cite_start]*Faculdade Senac Pernambuco - Análise e Desenvolvimento de Sistemas (ADS)* [cite: 51, 102]
+
+*Faculdade Senac Pernambuco - Analise e Desenvolvimento de Sistemas (ADS)*
