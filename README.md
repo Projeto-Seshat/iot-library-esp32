@@ -58,7 +58,6 @@
 
 *(Adicione aqui a imagem do Diagrama de Arquitetura Lógica e o Esquema Elétrico/Print do Wokwi)*
 ![Diagrama de Arquitetura]
-<img width="397" height="462" alt="image" src="https://github.com/user-attachments/assets/f04e36b1-7d2b-4aa9-94b9-fa91a81137db" />
 
 ## 6. Dossiê de Evidências (Mídia)
 * 📸 Imagem do circuito físico
