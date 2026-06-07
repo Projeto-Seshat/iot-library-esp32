@@ -57,23 +57,18 @@
 | Push Button | GPIO 4 | Alterna estado de ocupação (`INPUT_PULLUP`) |
 
 *(Adicione aqui a imagem do Diagrama de Arquitetura Lógica e o Esquema Elétrico/Print do Wokwi)*
-![Diagrama de Arquitetura](link_da_imagem)
+![Diagrama de Arquitetura]
 <img width="397" height="462" alt="image" src="https://github.com/user-attachments/assets/f04e36b1-7d2b-4aa9-94b9-fa91a81137db" />
 
 ## 6. Dossiê de Evidências (Mídia)
-*(Adicione fotos nítidas do seu circuito montado na protoboard e prints do Serial Monitor)*
 * 📸 Imagem do circuito físico
-* 💻 Print do Serial Monitor enviando o JSON
+* <img width="267" height="342" alt="image" src="https://github.com/user-attachments/assets/70d9e12d-dc65-46e4-9c40-650c8d2f22c7" />
+
+* 💻 Print do Serial Monitor enviando o JSON:
+<img width="1365" height="594" alt="image" src="https://github.com/user-attachments/assets/f8b8ff0f-608d-4d9e-9a3f-6e571ee3325d" />
+
 * 📊 Print do Dashboard em nuvem atualizando o status das salas
+<img width="720" height="1600" alt="image" src="https://github.com/user-attachments/assets/a2790ef1-8617-4afc-87d3-785ff4042934" />
+<img width="720" height="1600" alt="image" src="https://github.com/user-attachments/assets/6ce43ff6-a543-42e7-8d78-379d43353b36" />
 
-## 7. Instruções de Execução e Configuração
 
-**Segurança da Informação:** Não versione o arquivo contendo as credenciais da sua rede. Para executar este projeto:
-
-1. Renomeie o arquivo `config.h.example` para `config.h`.
-2. O arquivo `config.h` já está adicionado ao `.gitignore`.
-3. Preencha suas credenciais locais no `config.h`:
-   ```cpp
-   // config.h
-   const char* WIFI_SSID = "SEU_WIFI_AQUI";
-   const char* WIFI_PASSWORD = "SUA_SENHA_AQUI";
